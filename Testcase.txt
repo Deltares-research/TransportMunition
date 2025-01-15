@@ -1,0 +1,19 @@
+Testcase 1:
+Maas Sambeek bodemdata + dwarsdoorsnede 
+Maas Sambeek waterlevel
+Maas Venlo afvoer 
+Verhoogde afvoer 1300 m3/s met 1260 cm
+Hoge afvoer 2050 m3/s met 1430 cm
+
+Testcase 2:
+Waal Milingen bodemdata + dwarsdoorsnede
+Boven-rijn Lobith waterlevel
+Boven-rijn Lobith afvoer 
+Verhoogde afvoer 5400 m3/s met 1280 cm
+Hoge afvoer 8100 m3/s met 1480 cm
+
+Testcase 3:
+IJssel Westervoort bodemdata + dwarsdoorsnede 
+IJssel Westervoort IJsseldijkerw waterlevel
+IJssel Westervoort afvoer 
+Verhoogde afvoer 700 m3/s met 1095 cm
