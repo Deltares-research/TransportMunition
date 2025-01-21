@@ -48,19 +48,14 @@ def bathy(files):
         file_path = ".\\DataBodem\\" + header[jj]
         print(file_path)
         data_loaded = np.load(file_path)
-        X = data_loaded['X']
-        Y = data_loaded['Y']
         Z = data_loaded['Z']
         fact  = round(8000000*0.001)
-        X = X[::fact]
-        Y = Y[::fact]
         Z = Z[::fact] - np.mean(Z)
-
-        # Fit a spline to the X, Y coordinates (parametric fit)
         X = data_loaded['X']
         Y = data_loaded['Y']
         Z = data_loaded['Z'] - np.mean(Z)
 
+        # Fit a spline to the X, Y coordinates (parametric fit)
         coords = np.column_stack((X, Y))
         pca = PCA(n_components=2)
         coords_pca = pca.fit_transform(coords)
@@ -82,25 +77,26 @@ def bathy(files):
         Xn = centerline_points[:, 0]
         Yn  = centerline_points[:, 1]
         Zn = interpolator(Xn, Yn)
-
         indx = np.argsort(Xn)
         Xn = Xn[indx]
         Yn = Yn[indx]
-        Zn= Zn[indx]
+        Zn = Zn[indx]
+
+        # Align flow with horizontal axis with maxsize
         channel_indices = np.where(distances <= channel_width_half)[0]
         X = main_axis[channel_indices]
         Y = perpendicular_axis[channel_indices]
         Z = Z[channel_indices]
         Z = Z - np.mean(Z)
-        X = X-np.mean(X)
-        Y = Y-np.mean(Y)
+        X = X - np.mean(X)
+        Y = Y - np.mean(Y)
         distance = np.sqrt(X**2 + Y**2)
         indx = np.argsort(distance)
         X = X[indx[:maxsiz]]
         Y = Y[indx[:maxsiz]]
         Z = Z[indx[:maxsiz]]
 
-        # Save figure
+        # Save figure for bed variation
         plt.figure()
         levels = np.linspace(np.min(Z), np.max(Z), num_levels)
         contour = plt.tricontourf(X, Y, Z, levels=levels, cmap='jet')
@@ -114,7 +110,7 @@ def bathy(files):
         plt.ylim([np.min(Y), np.max(Y)])
         plt.savefig(file_path + ".png", dpi=300, bbox_inches='tight')
 
-        # Fourier
+        # Fit middle of river and Fourier
         dx = np.diff(Xn)  # Difference in X direction
         dy = np.diff(Yn)  # Difference in Y direction
         ds = np.sqrt(dx**2 + dy**2)
@@ -122,32 +118,37 @@ def bathy(files):
         ds = np.insert(ds, 0, 0)
         ds, indices = np.unique(ds, return_index=True)
         Zn = Zn[indices]
-        Yn = Yn[indices]
-        Xn = Xn[indices]
         ds_uniform = np.linspace(np.min(ds), np.max(ds), round(abs(np.max(ds) - np.min(ds))/0.01))
         interpolator = interp1d(ds, Zn, kind='cubic', fill_value="extrapolate")
         Zn = interpolator(ds_uniform)
         ds = ds_uniform
-        Znorg = Zn - np.mean(Zn)
-        Zn_fft = np.fft.fft(Znorg)
-
         sampling_interval = ds[1] - ds[0]  # assuming ds is the arc length increment
         frequencies = np.fft.fftfreq(len(Zn), d=sampling_interval)
+        Znorg = Zn - np.mean(Zn)
+        Zn_fft = np.fft.fft(Znorg)
+        Zn_fft[0] = 0
 
         positive_frequencies = frequencies[:len(frequencies) // 2]
         positive_Zn_fft = Zn_fft[:len(Zn_fft) // 2]
-
         magnitude = np.abs(positive_Zn_fft)
         depthTot = []
-    #---
+
+
         for ii in range(0, len(lenvect)):
-            cutoff_frequency = 1/(2 * lenvect[ii])* 0.5
-            cutoff_frequency2 = 1/(0.5 * lenvect[ii]) * 0.5
-            # cutoff_frequency2 = 1/(1e-6)* 0.5
+            # Filter
+            cutoff_frequency = 1/(2 * lenvect[ii]) * 0.5 # half wave length
+            cutoff_frequency2 = 1/(0.5 * lenvect[ii]) * 0.5 # half wave length
+
             lowpass_filter = np.abs(frequencies) > cutoff_frequency
             lowpass_filter2 = np.abs(frequencies) < cutoff_frequency2
 
             Zn_fft_filtered = Zn_fft * lowpass_filter * lowpass_filter2
+
+            # Calculate mean variation amplitude
+            energy = np.sum(np.abs(Zn_fft_filtered / len(Znorg)) ** 2)
+            depth = np.sqrt(energy)
+
+            # Time serie
             Zn_filtered = np.fft.ifft(Zn_fft_filtered)
             Zn_filtered = np.real(Zn_filtered)
 
@@ -156,23 +157,16 @@ def bathy(files):
             upcrossings = zero_crossings[Zn_filtered[zero_crossings] < 0]
 
             # Initialize a list to store the depths (max peak-to-peak difference)
-            depth = []
 
-            # Iterate over each pair of consecutive zero-crossings
+            # # Iterate over each pair of consecutive zero-crossings
             nn = 0
             val = 3
             for i in range(val, len(upcrossings) - 1-val):
                 # Define the segment between two consecutive zero-crossings (full wave)
                 start = upcrossings[i]
                 end = upcrossings[i + 1]+2
-                # period = ds[end]-ds[start]
-                # omega = 2 * np.pi / period
-                # popt, _ = curve_fit(lambda x, A: cos_func(x, A, omega),  ds[start:end], Zn_filtered[start:end], p0=[ np.max(Zn_filtered[start:end])], maxfev=20000)
 
                 # Find the minimum value in this segment
-                segment_min = abs(np.min(Zn_filtered[start:end]))
-                segment_max = abs(np.max(Zn_filtered[start:end]))
-
                 if i > len(upcrossings)/2 and nn==0:
                     nn = 1
                     named = np.char.replace(header[jj], ".npz", "")
@@ -185,30 +179,20 @@ def bathy(files):
                     plt.savefig(outputpath + "Testcase_" + str(named) + "_Objectlength_" + str(lenvect[ii]) + "_segment.png", dpi=300, bbox_inches='tight')
                     plt.close()
 
-                # Calculate the depth as the difference between max and min
-                depth.append((segment_min+segment_max)/2)
-
-            # depth = np.mean(Zn_filtered[indx1]) - np.mean(Zn_filtered[indx2])
-            depth = np.mean(np.array(depth))
+            # depth = np.mean(np.array(depth))
             depthTot.append(depth)
             print('Diepte: ', depth, ' met lengte ', lenvect[ii])
     #----
         depthTotTot = np.vstack([depthTotTot, np.array(depthTot)])
-        cutoff_frequency = 1 / (1.1 * max(lenvect)) * 0.5
-        cutoff_frequency2 = 1 / (0.9 * min(lenvect)) * 0.5
-        # cutoff_frequency2 = 0
+
+        # Total range of filter
+        cutoff_frequency = 1 / (2 * max(lenvect)) * 0.5
+        cutoff_frequency2 = 1 / (0.5 * min(lenvect)) * 0.5 # half wave length
         lowpass_filter = np.abs(frequencies) > cutoff_frequency
         lowpass_filter2 = np.abs(frequencies) < cutoff_frequency2
         Zn_fft_filtered = Zn_fft * lowpass_filter * lowpass_filter2
         Zn_filtered = np.fft.ifft(Zn_fft_filtered)
         Zn_filtered = np.real(Zn_filtered)
-
-        indx1, _ = find_peaks(Zn_filtered)
-        indx2, _ = find_peaks(-(Zn_filtered))
-
-        depth = np.mean(Zn_filtered[indx1]) - np.mean(Zn_filtered[indx2])
-
-        print('Depth: ', depth, ' total average')
         Zn_filtered_fft = np.abs(np.fft.fft(Zn_filtered)[:len(np.fft.fft(Zn_filtered)) // 2])
 
         # Plot the original data
@@ -224,7 +208,7 @@ def bathy(files):
 
         # Plot the magnitude of the Fourier transform (frequency domain)
         plt.subplot(2, 1, 2)
-        plt.plot(positive_frequencies, magnitude, label="Fourier Transform Waardee", color='blue')
+        plt.plot(positive_frequencies, magnitude, label="Fourier Transform Waarde", color='blue')
         plt.plot(positive_frequencies, Zn_filtered_fft,  label="Fourier Transform Waarde", color='orange')
         plt.xlabel("Frequentie (1/m)")
         plt.ylabel("Waarde")

@@ -87,8 +87,8 @@ def rivier(files):
         X[-1] = X[-1 - 1] + (X[-1] - X[-1 - 1]) * (0 - h[-1 - 1]) / (h[-1] - h[-1 - 1])
         h=hnew
         X=X-X[0]
-        area = np.trapz(abs(h), X)
-        xm =  np.trapz(abs(h) * X, X) / area
+        area = np.trapezoid(abs(h), X)
+        xm =  np.trapezoid(abs(h) * X, X) / area
         Um = Qcalib/area
 
         # indxloc = np.argmin(np.abs(X-(X[-1]- X[0]) * xperc)) # Assumption of maximum velocity lcoation
@@ -163,7 +163,8 @@ def rivier(files):
             y = abs(locations[:, 1])
             D = abs(h_interpolated)
             xs = np.where(xv < 0, abs(np.min(xv)), abs(np.max(xv)))
-            umaxprof = umax * np.sqrt(1 - (xv / xs)**2)
+            umaxprof = umax * (1 - (xv / xs)**2) # small width rivers Discussable with Peter
+            # umaxprof = umax * (1 - (xv / xs)**2)**0.5 # large width rivers
             u = np.zeros(len(locations))
 
             # Compute velocities
@@ -180,7 +181,7 @@ def rivier(files):
         scatter = plt.scatter(locations[:, 0], locations[:, 1], c=u, marker='o', cmap='viridis')
         plt.colorbar(scatter, label='U (m/s)')  # Colorbar for velocity
         plt.plot(X, h, color='red')
-        plt.xlabel('Afstand (m)')
+        plt.xlabel('Coordinaat in breedterichting rivier (m)')
         plt.ylabel('Diepte (m)')
         plt.title('Snelheidsverdeling in open kanaal stroming voor dwarsdoorsnede')
 
@@ -191,29 +192,26 @@ def rivier(files):
 
         plt.close()
 
+        # at height of object
         for jj in range(0, len(objects)):
             # Specify the desired height D
-            u_interpolated = []
-            DD = dataOV[jj, 0]# Replace with your value
+            u_interpolated = np.zeros_like(np.unique(locations[:, 0]))
+            DD = dataOV[jj, 0]
             for kk in range(0, len(np.unique(locations[:, 0]))):
-                # Get the current x-value
                 x_val = np.unique(locations[:, 0])[kk]
-                indices = locations[:, 0] == x_val
-                y_vals = locations[indices, 1]
-                y_adjusted = np.minimum(np.min(y_vals) + DD, 0)
-                interp_func = interp1d(y_vals, u[indices], kind='linear', fill_value='extrapolate', axis=0)
-                u_interpolated_at_x = interp_func(y_adjusted) if np.isnan(interp_func(y_adjusted))!= 1 else 0
-                u_interpolated.append(u_interpolated_at_x)
-            # If direct points are sparse, interpolate for smooth results
-            # Create a fine grid along x at y = D
-            x_line = np.linspace(min(locations[:, 0]), max(locations[:, 0]), 500)
-            u_interpolated = np.array(u_interpolated)
+                indice = np.where(locations[:, 0] == x_val)[0][0]
+                if (D[indice] -DD<= 0):
+                    u_interpolated[kk] = 0
+                else:
+                    delta_y = (DD) / (D[indice] - hu)
+                    u_interpolated[kk] = umaxprof[indice] / M * np.log(1 + (np.exp(M) - 1) * delta_y * np.exp(1 - delta_y))
 
+            x_line = np.linspace(min(locations[:, 0]), max(locations[:, 0]), 500)
 
             plt.figure(figsize=(10, 6))
             plt.plot(np.unique(locations[:, 0]), u_interpolated, color='red')
             plt.plot(x_line, np.ones_like(x_line)*threshold[jj], 'b--',)
-            plt.xlabel('Afstand (m)')
+            plt.xlabel('Coordinaat in breedterichting rivier (m)')
             plt.ylabel('Snelheid (m/s)')
             plt.title("Testcase_" + str(dataTot[ii, 1]) + "_Qcalib_" + str(Qcalib) + "_" +str(objects[jj]))
             plt.tight_layout()

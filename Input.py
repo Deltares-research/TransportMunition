@@ -50,11 +50,11 @@ filesTM = {
 transport(params=parametersTM, files=filesTM)
 
 # Input parameter rivier
-# filesRV = {
-#     "testcases": "Testcases.xlsx",        	# Database fit
-#     "OOlijst": "OOlijst.xlsx", 	     		# Lijst OO bommen
-#     "snelheid": "minimumSnelheid.xlsx",     # Lijst minimumsnelheden
-#     "ruwheid": "Ruwheid.xlsx",				# Ruwheid per bom
-#     "output_file": "beweging.txt",         	# Snelheid water, beweging object
-# }
-# rivier(files=filesRV)
+filesRV = {
+    "testcases": "Testcases.xlsx",        	# Database fit
+    "OOlijst": "OOlijst.xlsx", 	     		# Lijst OO bommen
+    "snelheid": "minimumSnelheid.xlsx",     # Lijst minimumsnelheden
+    "ruwheid": "Ruwheid.xlsx",				# Ruwheid per bom
+    "output_file": "beweging.txt",         	# Snelheid water, beweging object
+}
+rivier(files=filesRV)

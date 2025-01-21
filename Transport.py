@@ -85,7 +85,7 @@ def transport(params, files):
         thetatUcrit5 = U_crit5**2/(g*D_avg*(rho_obj/rho_w-1)) *(D_avg-factr*k) / D_avg
 
         "Martin"
-        a1 = 0.25
+        a1 = 0.35
         b1 = 2 # Found on old database
         D_avg = np.sqrt(4*V_obj/(np.pi*L))
         k[k==0] = 2.32*1e-6  # At least have non zero
@@ -193,6 +193,7 @@ def transport(params, files):
         params, covariance = curve_fit(model_func, Ref, MFf, p0=initial_params,  bounds=(lower_bounds, upper_bounds), maxfev=10000 ) # Increase the maximum number of function evaluations)
         beta_fit = 2
         alpha_fit = params[0]
+        alpha_fit = 0.35
         MF_fit = model_func(Ref, alpha_fit, beta_fit)
         residuals = MFf - MF_fit
         ss_res = np.sum(residuals**2)
@@ -210,7 +211,7 @@ def transport(params, files):
             plt.loglog(Dmax/k, Re[4, :], 'cs', label='U_crit (Chu et al)')  # Yellow crosses for U_crit5
             plt.loglog(Dmax/k, Re[5, :], 's', color='blue',label='U_crit (Deltares)')  # Yellow crosses for U_crit6
         plot_data_points(df_name, Dk, Ref)
-        plt.legend(title="Legend", loc='best')  # loc='best' places the legend at the optimal position
+        plt.legend(title="Legend", loc='center left', bbox_to_anchor=(1, 0.5))  # loc='best' places the legend at the optimal position
         plt.ylabel('Reynolds getal', fontsize=12)  # Font size for better readability
         plt.xlabel('Genormaliseerde Diameter (D/k)', fontsize=12)
         plt.grid(True)
@@ -237,7 +238,7 @@ def transport(params, files):
         # plt.loglog(Ref, MF_upper, label='Upper Bound', linestyle='--', color='green')
         # plt.loglog(Ref, MF_lower, label='Lower Bound', linestyle='--', color='orange')
         # plt.fill_between(Ref, MF_lower, MF_upper, color='lightgray', alpha=0.5, label='Bounds Area')
-        plt.legend(title="Legend", loc='best')  # loc='best' places the legend at the optimal position
+        plt.legend(title="Legend", loc='center left', bbox_to_anchor=(1, 0.5))  # loc='best' places the legend at the optimal position
         plt.ylabel('Moment factor', fontsize=12)  # Font size for better readability
         plt.xlabel('Reynolds getal', fontsize=12)
         plt.grid(True)
@@ -263,7 +264,7 @@ def transport(params, files):
         # plt.loglog(Ref, MF_upper, label='Upper Bound', linestyle='--', color='green')
         # plt.loglog(Ref, MF_lower, label='Lower Bound', linestyle='--', color='orange')
         # plt.fill_between(Ref, MF_lower, MF_upper, color='lightgray', alpha=0.5, label='Bounds Area')
-        plt.legend(title="Legend", loc='best')  # loc='best' places the legend at the optimal position
+        plt.legend(title="Legend", loc='center left', bbox_to_anchor=(1, 0.5))  # loc='best' places the legend at the optimal position
         plt.ylabel('Kracht factor', fontsize=12)  # Font size for better readability
         plt.xlabel('Reynolds getal', fontsize=12)
         plt.grid(True)
